@@ -1,0 +1,136 @@
+<!--pages/upload/upload.wxml-->
+<view class="page">
+  <!-- 状态栏占位 -->
+  <view class="status-bar-placeholder" style="height: {{statusBarHeight}}rpx;"></view>
+
+  <!-- 头部 -->
+  <view class="header">
+    <text class="header-title">上传书籍</text>
+    <text class="header-subtitle">支持多种电子书格式</text>
+  </view>
+
+  <!-- 上传区域 -->
+  <view class="upload-section">
+    <view class="upload-card">
+      <!-- 拖放上传区域 -->
+      <view class="upload-zone {{isDragging ? 'dragging' : ''}}" bindtap="chooseFile">
+        <view class="upload-icon-wrapper">
+          <text class="upload-icon">📚</text>
+        </view>
+        <text class="upload-title">点击或拖放文件到此处</text>
+        <text class="upload-desc">支持 EPUB、PDF、MOBI、AZW、TXT 格式</text>
+        <text class="upload-hint">单个文件最大支持 50MB</text>
+
+        <!-- 上传进度 -->
+        <view class="upload-progress" wx:if="{{uploading}}">
+          <view class="progress-bar">
+            <view class="progress-fill" style="width: {{uploadProgress}}%"></view>
+          </view>
+          <text class="progress-text">{{uploadProgress}}%</text>
+        </view>
+      </view>
+
+      <!-- 格式说明 -->
+      <view class="format-info">
+        <view class="format-item">
+          <text class="format-icon">📖</text>
+          <view class="format-detail">
+            <text class="format-name">EPUB</text>
+            <text class="format-desc">推荐格式，支持富文本</text>
+          </view>
+        </view>
+        <view class="format-item">
+          <text class="format-icon">📄</text>
+          <view class="format-detail">
+            <text class="format-name">PDF</text>
+            <text class="format-desc">保持原始排版</text>
+          </view>
+        </view>
+        <view class="format-item">
+          <text class="format-icon">📝</text>
+          <view class="format-detail">
+            <text class="format-name">TXT</text>
+            <text class="format-desc">纯文本格式</text>
+          </view>
+        </view>
+        <view class="format-item">
+          <text class="format-icon">📕</text>
+          <view class="format-detail">
+            <text class="format-name">MOBI/AZW</text>
+            <text class="format-desc">Kindle 格式</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最近上传 -->
+  <view class="recent-section" wx:if="{{recentBooks.length > 0}}">
+    <view class="section-header">
+      <text class="section-title">最近上传</text>
+      <text class="section-more" bindtap="viewAllBooks">查看全部</text>
+    </view>
+    <scroll-view class="recent-list" scroll-x show-scrollbar="{{false}}">
+      <view class="recent-item" wx:for="{{recentBooks}}" wx:key="id" bindtap="openBook" data-book="{{item}}">
+        <view wx:if="{{item.cover && item.cover.indexOf('linear-gradient') === 0}}" class="recent-cover recent-cover-gradient" style="background: {{item.cover}};"></view>
+        <image wx:else class="recent-cover" src="{{item.cover || '/images/default-cover.png'}}" mode="aspectFill"></image>
+        <text class="recent-title">{{item.title}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 云书库入口 -->
+  <view class="cloud-section">
+    <view class="cloud-card">
+      <view class="cloud-icon">☁️</view>
+      <view class="cloud-info">
+        <text class="cloud-title">云书库</text>
+        <text class="cloud-desc">同步您的阅读进度到云端</text>
+      </view>
+      <view class="cloud-arrow">›</view>
+    </view>
+  </view>
+
+  <!-- 底部提示 -->
+  <view class="footer-hint safe-area-bottom">
+    <text>所有书籍仅存储在本地，保护您的隐私</text>
+  </view>
+</view>
+
+<!-- 书籍信息编辑弹窗 -->
+<view class="modal {{showEditModal ? 'show' : ''}}" wx:if="{{showEditModal}}">
+  <view class="modal-mask" bindtap="closeEditModal"></view>
+  <view class="modal-content edit-modal">
+    <view class="modal-header">
+      <text class="modal-title">编辑书籍信息</text>
+    </view>
+    <view class="modal-body">
+      <!-- 封面预览 -->
+      <view class="edit-cover-preview">
+        <view wx:if="{{editingBook.cover && editingBook.cover.indexOf('linear-gradient') === 0}}" class="cover-image cover-image-gradient" style="background: {{editingBook.cover}};"></view>
+        <image wx:else class="cover-image" src="{{editingBook.cover}}" mode="aspectFill"></image>
+        <button class="btn btn-outline change-cover-btn" bindtap="changeCover">更换封面</button>
+      </view>
+
+      <!-- 书籍信息表单 -->
+      <view class="edit-form">
+        <view class="form-item">
+          <text class="form-label">书名</text>
+          <input class="form-input" value="{{editingBook.title}}" bindinput="onTitleInput" placeholder="请输入书名" />
+        </view>
+        <view class="form-item">
+          <text class="form-label">作者</text>
+          <input class="form-input" value="{{editingBook.author}}" bindinput="onAuthorInput" placeholder="请输入作者" />
+        </view>
+        <view class="form-item">
+          <text class="form-label">简介</text>
+          <textarea class="form-textarea" value="{{editingBook.description}}" bindinput="onDescInput" placeholder="请输入简介" maxlength="200"></textarea>
+        </view>
+      </view>
+    </view>
+    <view class="modal-footer">
+      <button class="btn btn-secondary modal-btn" bindtap="closeEditModal">取消</button>
+      <button class="btn btn-primary modal-btn" bindtap="saveBookInfo">保存</button>
+    </view>
+  </view>
+</view>

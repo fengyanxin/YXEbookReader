@@ -1,0 +1,354 @@
+<!--pages/reader/reader.wxml-->
+<view class="reader-page" style="background: {{backgroundColor}};">
+  <!-- 阅读器容器 -->
+  <view class="reader-container">
+    <!-- 内容区域 -->
+    <scroll-view
+      class="content-scroll"
+      scroll-y
+      bindscroll="onScroll"
+      scroll-into-view="{{scrollToView}}"
+      scroll-with-animation>
+
+      <!-- TXT文本阅读 -->
+      <view class="text-content" wx:if="{{book.format === 'TXT'}}" style="font-size: {{fontSize}}rpx; line-height: {{lineHeight}}; color: {{textColor}}; font-family: {{fontFamily}};">
+        <view class="chapter-title">{{book.title}}</view>
+        <view class="paragraph" wx:for="{{contentLines}}" wx:key="index">
+          <text>{{item}}</text>
+        </view>
+      </view>
+
+      <!-- EPUB文本阅读 -->
+      <view class="text-content" wx:if="{{book.format === 'EPUB'}}" style="font-size: {{fontSize}}rpx; line-height: {{lineHeight}}; color: {{textColor}}; font-family: {{fontFamily}};">
+        <!-- 有章节数据 -->
+        <block wx:if="{{book.chapters && book.chapters.length > 0}}">
+          <view class="chapter-header">
+            <text class="chapter-title-text">{{book.chapters[currentChapterIndex].title}}</text>
+            <text class="chapter-index">{{currentChapterIndex + 1}}/{{book.chapters.length}}</text>
+          </view>
+          <!-- 有章节内容 -->
+          <view class="paragraph" wx:for="{{chapterContent}}" wx:key="index">
+            <text>{{item}}</text>
+          </view>
+          <!-- 章节内容为空 -->
+          <view class="paragraph" wx:if="{{chapterContent && chapterContent.length === 0}}">
+            <text>暂无内容...</text>
+          </view>
+        </block>
+        <!-- 有单一内容 -->
+        <block wx:elif="{{book.content}}">
+          <view class="chapter-title">{{book.title}}</view>
+          <view class="paragraph" wx:for="{{epubContentLines}}" wx:key="index">
+            <text>{{item}}</text>
+          </view>
+        </block>
+        <!-- 无内容时的提示 -->
+        <block wx:else>
+          <view class="document-placeholder">
+            <text class="placeholder-icon">📖</text>
+            <text class="placeholder-text">EPUB 电子书</text>
+            <text class="placeholder-desc">此 EPUB 文件未能成功解析内容</text>
+            <text class="placeholder-hint">可能原因：文件损坏、加密格式或复杂的排版结构</text>
+
+            <view class="file-info">
+              <text class="info-label">书名：</text>
+              <text class="info-value">{{book.title}}</text>
+            </view>
+            <view class="file-info" wx:if="{{book.author}}">
+              <text class="info-label">作者：</text>
+              <text class="info-value">{{book.author}}</text>
+            </view>
+          </view>
+        </block>
+      </view>
+
+      <!-- PDF文本阅读 -->
+      <view class="text-content pdf-content" wx:if="{{book.format === 'PDF' && book.content && book.content.length > 200}}" style="font-size: {{fontSize}}rpx; line-height: {{lineHeight}}; color: {{textColor}}; font-family: {{fontFamily}};">
+        <view class="chapter-title">{{book.title}}</view>
+        <view class="paragraph" wx:for="{{pdfContentLines}}" wx:key="index">
+          <text>{{item}}</text>
+        </view>
+      </view>
+
+      <!-- PDF 信息/无内容时的提示 -->
+      <view class="rich-content" wx:if="{{book.format === 'PDF' && (!book.content || book.content.length <= 200)}}">
+        <view class="document-placeholder">
+          <text class="placeholder-icon">📄</text>
+          <text class="placeholder-text">PDF 文档</text>
+          <text class="placeholder-desc">此 PDF 无法提取文本内容</text>
+          <text class="placeholder-hint">可能原因：图片型 PDF、扫描件或加密文档</text>
+
+          <view class="file-info">
+            <text class="info-label">文件名：</text>
+            <text class="info-value">{{book.title}}</text>
+          </view>
+          <view class="file-info">
+            <text class="info-label">文件大小：</text>
+            <text class="info-value">{{fileSizeText}}</text>
+          </view>
+
+          <view class="pdf-tips">
+            <text class="tips-title">💡 提示</text>
+            <text class="tips-item">• 图片型 PDF 需要使用专门的 OCR 工具</text>
+            <text class="tips-item">• 建议使用支持 PDF 重排的阅读器</text>
+            <text class="tips-item">• 可以尝试重新导出为文本格式</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 空内容状态 -->
+      <view class="empty-content" wx:if="{{!contentLines.length && book.format === 'TXT' && !book.content}}">
+        <text class="empty-icon">📝</text>
+        <text class="empty-text">暂无内容</text>
+        <text class="empty-hint">该文件可能为空或格式不正确</text>
+      </view>
+    </scroll-view>
+
+    <!-- 进度指示器 -->
+    <view class="progress-indicator" wx:if="{{showProgress}}">
+      <view class="progress-bar">
+        <view class="progress-fill" style="width: {{readProgress}}%"></view>
+      </view>
+      <text class="progress-text">{{readProgress}}%</text>
+    </view>
+  </view>
+
+  <!-- 顶部控制栏 -->
+  <view class="top-bar {{showControls ? 'show' : ''}}" wx:if="{{showControls}}">
+    <view class="status-bar-safe" style="height: {{statusBarHeight}}rpx;"></view>
+    <view class="bar-content">
+      <view class="bar-left" bindtap="goBack">
+        <text class="back-icon">‹</text>
+        <text class="back-text">返回</text>
+      </view>
+      <view class="bar-center">
+        <text class="book-title" wx:if="{{book.chapters && book.chapters.length > 0}}">
+          {{book.chapters[currentChapterIndex] ? book.chapters[currentChapterIndex].title : book.title}}
+        </text>
+        <text class="book-title" wx:else>
+          {{book.title}}
+        </text>
+      </view>
+      <view class="bar-right" bindtap="toggleBookmark">
+        <text class="bookmark-icon">{{isBookmarked ? '🔖' : '📑'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部控制栏 -->
+  <view class="bottom-bar {{showControls ? 'show' : ''}}" wx:if="{{showControls}}">
+    <view class="bar-content">
+      <!-- 阅读进度 -->
+      <view class="progress-control">
+        <text class="progress-label">阅读进度</text>
+        <slider
+          class="progress-slider"
+          value="{{readProgress}}"
+          min="0"
+          max="100"
+          block-size="12"
+          activeColor="#667eea"
+          backgroundColor="#e9ecef"
+          disabled="{{book.format === 'EPUB' && book.chapters && book.chapters.length > 0}}"
+          bindchange="onProgressChange"
+          bindchanging="onProgressChanging" />
+        <text class="progress-value">{{readProgress}}%</text>
+      </view>
+
+      <!-- 快捷操作 -->
+      <view class="quick-actions">
+        <view class="action-btn" bindtap="prevChapter">
+          <text class="action-icon">◀</text>
+          <text class="action-text">上一章</text>
+        </view>
+        <view class="action-btn" bindtap="toggleChapterList">
+          <text class="action-icon">📑</text>
+          <text class="action-text">目录</text>
+        </view>
+        <view class="action-btn" bindtap="openSettings">
+          <text class="action-icon">⚙️</text>
+          <text class="action-text">设置</text>
+        </view>
+        <view class="action-btn" bindtap="nextChapter">
+          <text class="action-icon">▶</text>
+          <text class="action-text">下一章</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 点击区域（用于显示/隐藏控制栏） -->
+  <view class="touch-zones" wx:if="{{!showControls}}">
+    <view class="touch-zone left-zone" catchtap="prevPage"></view>
+    <view class="touch-zone center-zone" catchtap="toggleControls"></view>
+    <view class="touch-zone right-zone" catchtap="nextPage"></view>
+  </view>
+
+  <!-- 设置面板 -->
+  <view class="settings-panel {{showSettings ? 'show' : ''}}" wx:if="{{showSettings}}">
+    <view class="panel-mask" bindtap="closeSettings"></view>
+    <view class="panel-content">
+      <view class="panel-header">
+        <text class="panel-title">阅读设置</text>
+        <view class="panel-close" bindtap="closeSettings">✕</view>
+      </view>
+
+      <scroll-view class="panel-body" scroll-y>
+        <!-- 字体大小 -->
+        <view class="setting-section">
+          <view class="section-header">
+            <text class="section-title">字体大小</text>
+            <text class="section-value">{{fontSize}}rpx</text>
+          </view>
+          <view class="size-presets">
+            <view class="size-preset {{fontSize === 28 ? 'active' : ''}}" bindtap="setFontSize" data-size="28">
+              <text class="preset-text" style="font-size: 28rpx;">A</text>
+            </view>
+            <view class="size-preset {{fontSize === 32 ? 'active' : ''}}" bindtap="setFontSize" data-size="32">
+              <text class="preset-text" style="font-size: 32rpx;">A</text>
+            </view>
+            <view class="size-preset {{fontSize === 36 ? 'active' : ''}}" bindtap="setFontSize" data-size="36">
+              <text class="preset-text" style="font-size: 36rpx;">A</text>
+            </view>
+            <view class="size-preset {{fontSize === 42 ? 'active' : ''}}" bindtap="setFontSize" data-size="42">
+              <text class="preset-text" style="font-size: 42rpx;">A</text>
+            </view>
+            <view class="size-preset {{fontSize === 48 ? 'active' : ''}}" bindtap="setFontSize" data-size="48">
+              <text class="preset-text" style="font-size: 48rpx;">A</text>
+            </view>
+          </view>
+          <slider
+            class="size-slider"
+            value="{{fontSize}}"
+            min="20"
+            max="60"
+            step="2"
+            block-size="12"
+            activeColor="#667eea"
+            bindchange="onFontSizeChange" />
+        </view>
+
+        <!-- 字体选择 -->
+        <view class="setting-section">
+          <view class="section-header">
+            <text class="section-title">字体</text>
+          </view>
+          <view class="font-options">
+            <view class="font-option {{fontFamily === 'system' ? 'active' : ''}}" bindtap="setFontFamily" data-font="system">
+              <text class="font-name" style="font-family: system;">系统默认</text>
+            </view>
+            <view class="font-option {{fontFamily === 'serif' ? 'active' : ''}}" bindtap="setFontFamily" data-font="serif">
+              <text class="font-name" style="font-family: serif;">衬线体</text>
+            </view>
+            <view class="font-option {{fontFamily === 'sans-serif' ? 'active' : ''}}" bindtap="setFontFamily" data-font="sans-serif">
+              <text class="font-name" style="font-family: sans-serif;">无衬线</text>
+            </view>
+            <view class="font-option {{fontFamily === 'monospace' ? 'active' : ''}}" bindtap="setFontFamily" data-font="monospace">
+              <text class="font-name" style="font-family: monospace;">等宽字体</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 行间距 -->
+        <view class="setting-section">
+          <view class="section-header">
+            <text class="section-title">行间距</text>
+            <text class="section-value">{{lineHeight}}</text>
+          </view>
+          <slider
+            class="line-height-slider"
+            value="{{lineHeight}}"
+            min="1.2"
+            max="2.5"
+            step="0.1"
+            block-size="12"
+            activeColor="#667eea"
+            bindchange="onLineHeightChange" />
+        </view>
+
+        <!-- 主题选择 -->
+        <view class="setting-section">
+          <view class="section-header">
+            <text class="section-title">阅读主题</text>
+          </view>
+          <view class="theme-options">
+            <view class="theme-option {{theme === 'light' ? 'active' : ''}}" bindtap="setTheme" data-theme="light">
+              <view class="theme-preview light-preview">
+                <text class="preview-text">明亮</text>
+              </view>
+            </view>
+            <view class="theme-option {{theme === 'sepia' ? 'active' : ''}}" bindtap="setTheme" data-theme="sepia">
+              <view class="theme-preview sepia-preview">
+                <text class="preview-text">护眼</text>
+              </view>
+            </view>
+            <view class="theme-option {{theme === 'dark' ? 'active' : ''}}" bindtap="setTheme" data-theme="dark">
+              <view class="theme-preview dark-preview">
+                <text class="preview-text">夜间</text>
+              </view>
+            </view>
+            <view class="theme-option {{theme === 'green' ? 'active' : ''}}" bindtap="setTheme" data-theme="green">
+              <view class="theme-preview green-preview">
+                <text class="preview-text">绿色</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 背景图片 -->
+        <view class="setting-section">
+          <view class="section-header">
+            <text class="section-title">背景图片</text>
+          </view>
+          <view class="bg-options">
+            <view class="bg-option {{backgroundType === 'solid' ? 'active' : ''}}" bindtap="setBackground" data-type="solid" data-bg="" data-color="">
+              <text class="bg-name">纯色</text>
+            </view>
+            <view class="bg-option" bindtap="chooseBackgroundImage">
+              <text class="bg-name">自定义图片</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 翻页效果 -->
+        <view class="setting-section">
+          <view class="section-header">
+            <text class="section-title">翻页效果</text>
+          </view>
+          <view class="effect-options">
+            <view class="effect-option {{pageEffect === 'slide' ? 'active' : ''}}" bindtap="setPageEffect" data-effect="slide">
+              <text class="effect-name">滑动</text>
+            </view>
+            <view class="effect-option {{pageEffect === 'fade' ? 'active' : ''}}" bindtap="setPageEffect" data-effect="fade">
+              <text class="effect-name">淡入淡出</text>
+            </view>
+            <view class="effect-option {{pageEffect === 'none' ? 'active' : ''}}" bindtap="setPageEffect" data-effect="none">
+              <text class="effect-name">无效果</text>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <!-- 章节目录面板 -->
+  <view class="chapter-panel {{showChapterList ? 'show' : ''}}" wx:if="{{showChapterList}}">
+    <view class="panel-mask" bindtap="toggleChapterList"></view>
+    <view class="panel-content chapter-list-content">
+      <view class="panel-header">
+        <text class="panel-title">章节目录</text>
+        <view class="panel-close" bindtap="toggleChapterList">✕</view>
+      </view>
+
+      <scroll-view class="panel-body" scroll-y>
+        <view class="chapter-list">
+          <view class="chapter-item {{currentChapterIndex === index ? 'active' : ''}}" wx:for="{{book.chapters}}" wx:key="index" bindtap="selectChapter" data-index="{{index}}">
+            <text class="chapter-index">{{index + 1}}</text>
+            <text class="chapter-name">{{item.title}}</text>
+            <text class="chapter-check" wx:if="{{currentChapterIndex === index}}">✓</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

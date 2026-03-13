@@ -1,0 +1,89 @@
+<!--pages/index/index.wxml-->
+<view class="page">
+  <!-- 状态栏占位 -->
+  <view class="status-bar-placeholder" style="height: {{statusBarHeight}}rpx;"></view>
+
+  <!-- 头部 -->
+  <view class="header">
+    <view class="header-content">
+      <text class="header-title">我的书架</text>
+      <text class="header-subtitle">{{books.length}} 本书籍</text>
+    </view>
+    <view class="header-actions">
+      <view class="search-box" bindtap="onSearch">
+        <text class="search-icon">🔍</text>
+        <text class="search-text">搜索书籍...</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 书籍列表 -->
+  <view class="bookshelf">
+    <block wx:if="{{books.length > 0}}">
+      <view class="book-grid">
+        <view class="book-card" wx:for="{{books}}" wx:key="id" bindtap="onBookTap" data-book="{{item}}">
+          <!-- 书籍封面 -->
+          <view class="book-cover-wrapper">
+            <!-- 如果封面是渐变色，使用view显示 -->
+            <view wx:if="{{item.cover && item.cover.indexOf('linear-gradient') === 0}}" class="book-cover book-cover-gradient" style="background: {{item.cover}};"></view>
+            <!-- 否则使用image标签 -->
+            <image wx:else class="book-cover" src="{{item.cover || '/images/default-cover.png'}}" mode="aspectFill"></image>
+            <!-- 阅读进度 -->
+            <view class="book-progress-bar">
+              <view class="book-progress-fill" style="width: {{item.progress || 0}}%"></view>
+            </view>
+            <!-- 格式标签 -->
+            <view class="book-format">{{item.format}}</view>
+          </view>
+
+          <!-- 书籍信息 -->
+          <view class="book-info">
+            <text class="book-title">{{item.title}}</text>
+            <text class="book-author">{{item.author || '未知作者'}}</text>
+            <view class="book-meta">
+              <text class="book-progress-text">已读 {{item.progress || 0}}%</text>
+              <text class="book-time">{{item.lastReadTimeText}}</text>
+            </view>
+          </view>
+
+          <!-- 删除按钮 -->
+          <view class="book-delete" catchtap="onDeleteBook" data-id="{{item.id}}">
+            <text>🗑️</text>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:else>
+      <text class="empty-icon">📚</text>
+      <text class="empty-title">书架空空如也</text>
+      <text class="empty-desc">点击下方"上传"按钮添加您的第一本书</text>
+      <button class="btn btn-primary empty-btn" bindtap="goToUpload">
+        <text>📤 上传书籍</text>
+      </button>
+    </view>
+  </view>
+
+  <!-- 底部提示 -->
+  <view class="footer-hint safe-area-bottom">
+    <text>支持 EPUB、PDF、MOBI、AZW、TXT 格式</text>
+  </view>
+</view>
+
+<!-- 删除确认弹窗 -->
+<view class="modal {{showDeleteModal ? 'show' : ''}}" wx:if="{{showDeleteModal}}">
+  <view class="modal-mask" bindtap="closeDeleteModal"></view>
+  <view class="modal-content">
+    <view class="modal-header">
+      <text class="modal-title">确认删除</text>
+    </view>
+    <view class="modal-body">
+      <text class="modal-text">确定要删除《{{deleteBookTitle}}》吗？此操作不可撤销。</text>
+    </view>
+    <view class="modal-footer">
+      <button class="btn btn-secondary modal-btn" bindtap="closeDeleteModal">取消</button>
+      <button class="btn btn-danger modal-btn" bindtap="confirmDelete">删除</button>
+    </view>
+  </view>
+</view>

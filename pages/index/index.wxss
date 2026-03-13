@@ -1,0 +1,348 @@
+/* pages/index/index.wxss */
+.page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+/* 状态栏占位 */
+.status-bar-placeholder {
+  width: 100%;
+  height: var(--status-bar-height);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* 头部样式 */
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 30rpx 30rpx 60rpx;
+  border-radius: 0 0 60rpx 60rpx;
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.3);
+}
+
+.header-content {
+  margin-bottom: 30rpx;
+}
+
+.header-title {
+  display: block;
+  font-size: 56rpx;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 10rpx;
+  letter-spacing: 2rpx;
+}
+
+.header-subtitle {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.header-actions {
+  position: relative;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 50rpx;
+  padding: 24rpx 30rpx;
+  transition: all 0.3s ease;
+}
+
+.search-box:active {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(0.98);
+}
+
+.search-icon {
+  font-size: 32rpx;
+  margin-right: 15rpx;
+}
+
+.search-text {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* 书架区域 */
+.bookshelf {
+  padding: 30rpx;
+  margin-top: -30rpx;
+}
+
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30rpx;
+}
+
+/* 书籍卡片 */
+.book-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.book-card:active {
+  transform: translateY(-4rpx);
+  box-shadow: 0 12rpx 48rpx rgba(0, 0, 0, 0.12);
+}
+
+.book-cover-wrapper {
+  position: relative;
+  width: 100%;
+  height: 360rpx;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.book-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.book-cover-gradient {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+}
+
+.book-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6rpx;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.book-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transition: width 0.3s ease;
+}
+
+.book-format {
+  position: absolute;
+  top: 15rpx;
+  right: 15rpx;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+  font-size: 20rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  font-weight: 600;
+}
+
+.book-info {
+  padding: 24rpx;
+}
+
+.book-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-author {
+  display: block;
+  font-size: 24rpx;
+  color: #7f8c8d;
+  margin-bottom: 15rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.book-progress-text {
+  font-size: 22rpx;
+  color: #667eea;
+  font-weight: 500;
+}
+
+.book-time {
+  font-size: 20rpx;
+  color: #95a5a6;
+}
+
+.book-delete {
+  position: absolute;
+  top: 20rpx;
+  left: 20rpx;
+  width: 60rpx;
+  height: 60rpx;
+  background: rgba(231, 76, 60, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
+  transform: scale(1);
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.book-delete:active {
+  transform: scale(0.9);
+  background: rgba(192, 57, 43, 1);
+}
+
+.book-delete text {
+  font-size: 28rpx;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 150rpx 60rpx;
+  background: #ffffff;
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
+}
+
+.empty-icon {
+  font-size: 160rpx;
+  margin-bottom: 30rpx;
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 15rpx;
+}
+
+.empty-desc {
+  font-size: 26rpx;
+  color: #7f8c8d;
+  margin-bottom: 50rpx;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.empty-btn {
+  padding: 24rpx 60rpx;
+  font-size: 30rpx;
+  border-radius: 50rpx;
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.4);
+}
+
+/* 底部提示 */
+.footer-hint {
+  text-align: center;
+  padding: 30rpx;
+  font-size: 24rpx;
+  color: #95a5a6;
+}
+
+/* 删除确认弹窗 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.modal.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.modal-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  width: 560rpx;
+  background: #ffffff;
+  border-radius: 24rpx;
+  overflow: hidden;
+  transition: transform 0.3s ease;
+}
+
+.modal.show .modal-content {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.modal-header {
+  padding: 40rpx 30rpx 20rpx;
+  text-align: center;
+}
+
+.modal-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.modal-body {
+  padding: 30rpx;
+  text-align: center;
+}
+
+.modal-text {
+  font-size: 28rpx;
+  color: #7f8c8d;
+  line-height: 1.6;
+}
+
+.modal-footer {
+  display: flex;
+  border-top: 1rpx solid #ecf0f1;
+}
+
+.modal-btn {
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  padding: 30rpx;
+  font-size: 30rpx;
+  background: #ffffff;
+}
+
+.modal-btn:first-child {
+  border-right: 1rpx solid #ecf0f1;
+}
+
+.modal-btn.btn-danger {
+  background: #e74c3c;
+  color: #ffffff;
+}

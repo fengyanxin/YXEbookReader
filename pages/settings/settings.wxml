@@ -1,0 +1,243 @@
+<!--pages/settings/settings.wxml-->
+<view class="page">
+  <!-- 状态栏占位 -->
+  <view class="status-bar-placeholder" style="height: {{statusBarHeight}}rpx;"></view>
+
+  <!-- 头部 -->
+  <view class="header">
+    <text class="header-title">设置</text>
+    <text class="header-subtitle">个性化您的阅读体验</text>
+  </view>
+
+  <!-- 设置列表 -->
+  <view class="settings-list">
+    <!-- 阅读设置 -->
+    <view class="setting-group">
+      <view class="group-title">阅读设置</view>
+
+      <view class="setting-item" bindtap="openFontSizeSetting">
+        <view class="item-left">
+          <text class="item-icon">🔤</text>
+          <text class="item-label">字体大小</text>
+        </view>
+        <view class="item-right">
+          <text class="item-value">{{settings.fontSize}}rpx</text>
+          <text class="item-arrow">›</text>
+        </view>
+      </view>
+
+      <view class="setting-item" bindtap="openFontFamilySetting">
+        <view class="item-left">
+          <text class="item-icon">📝</text>
+          <text class="item-label">字体</text>
+        </view>
+        <view class="item-right">
+          <text class="item-value">{{fontFamilyName}}</text>
+          <text class="item-arrow">›</text>
+        </view>
+      </view>
+
+      <view class="setting-item" bindtap="openLineHeightSetting">
+        <view class="item-left">
+          <text class="item-icon">📏</text>
+          <text class="item-label">行间距</text>
+        </view>
+        <view class="item-right">
+          <text class="item-value">{{settings.lineHeight}}</text>
+          <text class="item-arrow">›</text>
+        </view>
+      </view>
+
+      <view class="setting-item" bindtap="openThemeSetting">
+        <view class="item-left">
+          <text class="item-icon">🎨</text>
+          <text class="item-label">阅读主题</text>
+        </view>
+        <view class="item-right">
+          <view class="theme-preview {{settings.theme}}">
+            <text class="preview-dot"></text>
+          </view>
+          <text class="item-arrow">›</text>
+        </view>
+      </view>
+
+      <view class="setting-item" bindtap="openBackgroundSetting">
+        <view class="item-left">
+          <text class="item-icon">🖼️</text>
+          <text class="item-label">背景设置</text>
+        </view>
+        <view class="item-right">
+          <text class="item-value">{{backgroundTypeName}}</text>
+          <text class="item-arrow">›</text>
+        </view>
+      </view>
+
+      <view class="setting-item" bindtap="openPageEffectSetting">
+        <view class="item-left">
+          <text class="item-icon">📖</text>
+          <text class="item-label">翻页效果</text>
+        </view>
+        <view class="item-right">
+          <text class="item-value">{{pageEffectName}}</text>
+          <text class="item-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 数据管理 -->
+    <view class="setting-group">
+      <view class="group-title">数据管理</view>
+
+      <view class="setting-item" bindtap="showStorageInfo">
+        <view class="item-left">
+          <text class="item-icon">💾</text>
+          <text class="item-label">存储空间</text>
+        </view>
+        <view class="item-right">
+          <text class="item-value">{{storageUsed}}</text>
+          <text class="item-arrow">›</text>
+        </view>
+      </view>
+
+      <view class="setting-item" bindtap="exportData">
+        <view class="item-left">
+          <text class="item-icon">📤</text>
+          <text class="item-label">导出阅读数据</text>
+        </view>
+        <view class="item-right">
+          <text class="item-arrow">›</text>
+        </view>
+      </view>
+
+      <view class="setting-item" bindtap="clearCache">
+        <view class="item-left">
+          <text class="item-icon">🧹</text>
+          <text class="item-label">清除缓存</text>
+        </view>
+        <view class="item-right">
+          <text class="item-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 其他设置 -->
+    <view class="setting-group">
+      <view class="group-title">其他</view>
+
+      <view class="setting-item" bindtap="openAbout">
+        <view class="item-left">
+          <text class="item-icon">ℹ️</text>
+          <text class="item-label">关于</text>
+        </view>
+        <view class="item-right">
+          <text class="item-value">v1.0.0</text>
+          <text class="item-arrow">›</text>
+        </view>
+      </view>
+
+      <view class="setting-item" bindtap="openHelp">
+        <view class="item-left">
+          <text class="item-icon">❓</text>
+          <text class="item-label">帮助与反馈</text>
+        </view>
+        <view class="item-right">
+          <text class="item-arrow">›</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部信息 -->
+  <view class="footer-info safe-area-bottom">
+    <text class="footer-text">电子书阅读器 v1.0.0</text>
+    <text class="footer-desc">享受阅读的乐趣</text>
+  </view>
+</view>
+
+<!-- 字体大小设置弹窗 -->
+<view class="action-sheet {{fontSizeSheetShow ? 'show' : ''}}" wx:if="{{fontSizeSheetShow}}">
+  <view class="sheet-mask" bindtap="closeFontSizeSheet"></view>
+  <view class="sheet-content">
+    <view class="sheet-header">
+      <text class="sheet-title">字体大小</text>
+      <view class="sheet-close" bindtap="closeFontSizeSheet">✕</view>
+    </view>
+    <view class="sheet-body">
+      <view class="size-options">
+        <view class="size-option {{settings.fontSize === 24 ? 'active' : ''}}" bindtap="setFontSize" data-size="24">
+          <text class="size-text" style="font-size: 24rpx;">A</text>
+          <text class="size-label">极小</text>
+        </view>
+        <view class="size-option {{settings.fontSize === 28 ? 'active' : ''}}" bindtap="setFontSize" data-size="28">
+          <text class="size-text" style="font-size: 28rpx;">A</text>
+          <text class="size-label">较小</text>
+        </view>
+        <view class="size-option {{settings.fontSize === 32 ? 'active' : ''}}" bindtap="setFontSize" data-size="32">
+          <text class="size-text" style="font-size: 32rpx;">A</text>
+          <text class="size-label">标准</text>
+        </view>
+        <view class="size-option {{settings.fontSize === 36 ? 'active' : ''}}" bindtap="setFontSize" data-size="36">
+          <text class="size-text" style="font-size: 36rpx;">A</text>
+          <text class="size-label">较大</text>
+        </view>
+        <view class="size-option {{settings.fontSize === 42 ? 'active' : ''}}" bindtap="setFontSize" data-size="42">
+          <text class="size-text" style="font-size: 42rpx;">A</text>
+          <text class="size-label">很大</text>
+        </view>
+        <view class="size-option {{settings.fontSize === 48 ? 'active' : ''}}" bindtap="setFontSize" data-size="48">
+          <text class="size-text" style="font-size: 48rpx;">A</text>
+          <text class="size-label">特大</text>
+        </view>
+      </view>
+      <slider
+        class="size-slider"
+        value="{{settings.fontSize}}"
+        min="20"
+        max="60"
+        step="2"
+        block-size="12"
+        activeColor="#667eea"
+        show-value
+        bindchange="onFontSizeChange" />
+    </view>
+  </view>
+</view>
+
+<!-- 主题设置弹窗 -->
+<view class="action-sheet {{themeSheetShow ? 'show' : ''}}" wx:if="{{themeSheetShow}}">
+  <view class="sheet-mask" bindtap="closeThemeSheet"></view>
+  <view class="sheet-content">
+    <view class="sheet-header">
+      <text class="sheet-title">阅读主题</text>
+      <view class="sheet-close" bindtap="closeThemeSheet">✕</view>
+    </view>
+    <view class="sheet-body">
+      <view class="theme-grid">
+        <view class="theme-card {{settings.theme === 'light' ? 'active' : ''}}" bindtap="setTheme" data-theme="light">
+          <view class="theme-preview light-preview">
+            <text class="preview-text">Aa</text>
+          </view>
+          <text class="theme-name">明亮</text>
+        </view>
+        <view class="theme-card {{settings.theme === 'sepia' ? 'active' : ''}}" bindtap="setTheme" data-theme="sepia">
+          <view class="theme-preview sepia-preview">
+            <text class="preview-text">Aa</text>
+          </view>
+          <text class="theme-name">护眼</text>
+        </view>
+        <view class="theme-card {{settings.theme === 'dark' ? 'active' : ''}}" bindtap="setTheme" data-theme="dark">
+          <view class="theme-preview dark-preview">
+            <text class="preview-text">Aa</text>
+          </view>
+          <text class="theme-name">夜间</text>
+        </view>
+        <view class="theme-card {{settings.theme === 'green' ? 'active' : ''}}" bindtap="setTheme" data-theme="green">
+          <view class="theme-preview green-preview">
+            <text class="preview-text">Aa</text>
+          </view>
+          <text class="theme-name">绿色</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

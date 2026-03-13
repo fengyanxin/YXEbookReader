@@ -1,0 +1,366 @@
+/* pages/settings/settings.wxss */
+.page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+/* 状态栏占位 */
+.status-bar-placeholder {
+  width: 100%;
+  height: var(--status-bar-height);
+  background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+/* 头部样式 */
+.header {
+  padding: 30rpx 30rpx 20rpx;
+  text-align: center;
+}
+
+.header-title {
+  display: block;
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 10rpx;
+}
+
+.header-subtitle {
+  font-size: 26rpx;
+  color: #7f8c8d;
+}
+
+/* 设置列表 */
+.settings-list {
+  padding: 30rpx;
+}
+
+.setting-group {
+  margin-bottom: 30rpx;
+}
+
+.group-title {
+  font-size: 26rpx;
+  color: #7f8c8d;
+  padding: 20rpx 10rpx 10rpx;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx 25rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  margin-bottom: 2rpx;
+  transition: background 0.2s ease;
+}
+
+.setting-item:active {
+  background: #f8f9fa;
+}
+
+.setting-item:first-child {
+  border-radius: 16rpx 16rpx 4rpx 4rpx;
+}
+
+.setting-item:last-child {
+  border-radius: 4rpx 4rpx 16rpx 16rpx;
+  margin-bottom: 0;
+}
+
+.setting-item:only-child {
+  border-radius: 16rpx;
+}
+
+.item-left {
+  display: flex;
+  align-items: center;
+}
+
+.item-icon {
+  font-size: 36rpx;
+  margin-right: 20rpx;
+}
+
+.item-label {
+  font-size: 30rpx;
+  color: #2c3e50;
+}
+
+.item-right {
+  display: flex;
+  align-items: center;
+}
+
+.item-value {
+  font-size: 26rpx;
+  color: #7f8c8d;
+  margin-right: 10rpx;
+}
+
+.item-arrow {
+  font-size: 36rpx;
+  color: #bdc3c7;
+  font-weight: 300;
+}
+
+/* 主题预览 */
+.theme-preview {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  margin-right: 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.theme-preview.light {
+  background: linear-gradient(135deg, #ffffff 0%, #ecf0f1 100%);
+}
+
+.theme-preview.sepia {
+  background: linear-gradient(135deg, #f4ecd8 0%, #e8dcc4 100%);
+}
+
+.theme-preview.dark {
+  background: linear-gradient(135deg, #2c3e50 0%, #1a1a1a 100%);
+}
+
+.theme-preview.green {
+  background: linear-gradient(135deg, #c7edcc 0%, #a8e6b0 100%);
+}
+
+.preview-dot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.theme-preview.light .preview-dot {
+  background: #2c3e50;
+}
+
+.theme-preview.sepia .preview-dot {
+  background: #5c4b37;
+}
+
+.theme-preview.dark .preview-dot {
+  background: #c0c0c0;
+}
+
+.theme-preview.green .preview-dot {
+  background: #2c5c2f;
+}
+
+/* 底部信息 */
+.footer-info {
+  text-align: center;
+  padding: 60rpx 30rpx;
+}
+
+.footer-text {
+  display: block;
+  font-size: 26rpx;
+  color: #7f8c8d;
+  margin-bottom: 10rpx;
+}
+
+.footer-desc {
+  font-size: 24rpx;
+  color: #95a5a6;
+}
+
+/* 弹窗样式 */
+.action-sheet {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.action-sheet.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.sheet-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.sheet-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-radius: 32rpx 32rpx 0 0;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  max-height: 70vh;
+}
+
+.action-sheet.show .sheet-content {
+  transform: translateY(0);
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #ecf0f1;
+  position: relative;
+}
+
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.sheet-close {
+  position: absolute;
+  right: 30rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  color: #7f8c8d;
+}
+
+.sheet-body {
+  padding: 30rpx;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+/* 字体大小选项 */
+.size-options {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 40rpx;
+}
+
+.size-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 15rpx;
+  border: 2rpx solid #ecf0f1;
+  border-radius: 16rpx;
+  min-width: 100rpx;
+  transition: all 0.2s ease;
+}
+
+.size-option.active {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.size-text {
+  font-size: 32rpx;
+  color: #2c3e50;
+  margin-bottom: 10rpx;
+}
+
+.size-label {
+  font-size: 22rpx;
+  color: #7f8c8d;
+}
+
+.size-slider {
+  width: 100%;
+}
+
+/* 主题网格 */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+}
+
+.theme-card {
+  text-align: center;
+  padding: 20rpx;
+  border: 3rpx solid transparent;
+  border-radius: 20rpx;
+  transition: all 0.2s ease;
+}
+
+.theme-card.active {
+  border-color: #667eea;
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.2);
+}
+
+.theme-preview {
+  width: 100%;
+  height: 200rpx;
+  border-radius: 16rpx;
+  margin-bottom: 15rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+}
+
+.light-preview {
+  background: linear-gradient(135deg, #ffffff 0%, #ecf0f1 100%);
+}
+
+.sepia-preview {
+  background: linear-gradient(135deg, #f4ecd8 0%, #e8dcc4 100%);
+}
+
+.dark-preview {
+  background: linear-gradient(135deg, #2c3e50 0%, #1a1a1a 100%);
+}
+
+.green-preview {
+  background: linear-gradient(135deg, #c7edcc 0%, #a8e6b0 100%);
+}
+
+.preview-text {
+  font-size: 48rpx;
+  font-weight: 700;
+}
+
+.light-preview .preview-text {
+  color: #2c3e50;
+}
+
+.sepia-preview .preview-text {
+  color: #5c4b37;
+}
+
+.dark-preview .preview-text {
+  color: #c0c0c0;
+}
+
+.green-preview .preview-text {
+  color: #2c5c2f;
+}
+
+.theme-name {
+  font-size: 26rpx;
+  color: #2c3e50;
+  font-weight: 500;
+}
