@@ -1,17 +1,18 @@
 <!--pages/reader/reader.wxml-->
 <view class="reader-page" style="background: {{backgroundColor}};">
-  <!-- 阅读器容器 -->
+    <!-- 阅读器容器 -->
   <view class="reader-container">
     <!-- 内容区域 -->
     <scroll-view
       class="content-scroll"
       scroll-y
       bindscroll="onScroll"
+      scroll-top="{{scrollTop}}"
       scroll-into-view="{{scrollToView}}"
       scroll-with-animation>
 
       <!-- TXT文本阅读 -->
-      <view class="text-content" wx:if="{{book.format === 'TXT'}}" style="font-size: {{fontSize}}rpx; line-height: {{lineHeight}}; color: {{textColor}}; font-family: {{fontFamily}};">
+      <view class="text-content" id="chapter_start" wx:if="{{book.format === 'TXT'}}" style="font-size: {{fontSize}}rpx; line-height: {{lineHeight}}; color: {{textColor}}; font-family: {{fontFamily}};">
         <view class="chapter-title">{{book.title}}</view>
         <view class="paragraph" wx:for="{{contentLines}}" wx:key="index">
           <text>{{item}}</text>
@@ -19,7 +20,7 @@
       </view>
 
       <!-- EPUB文本阅读 -->
-      <view class="text-content" wx:if="{{book.format === 'EPUB'}}" style="font-size: {{fontSize}}rpx; line-height: {{lineHeight}}; color: {{textColor}}; font-family: {{fontFamily}};">
+      <view class="text-content" id="chapter_start" wx:if="{{book.format === 'EPUB'}}" style="font-size: {{fontSize}}rpx; line-height: {{lineHeight}}; color: {{textColor}}; font-family: {{fontFamily}};">
         <!-- 有章节数据 -->
         <block wx:if="{{book.chapters && book.chapters.length > 0}}">
           <view class="chapter-header">
@@ -63,7 +64,7 @@
       </view>
 
       <!-- PDF文本阅读 -->
-      <view class="text-content pdf-content" wx:if="{{book.format === 'PDF' && book.content && book.content.length > 200}}" style="font-size: {{fontSize}}rpx; line-height: {{lineHeight}}; color: {{textColor}}; font-family: {{fontFamily}};">
+      <view class="text-content pdf-content" id="chapter_start" wx:if="{{book.format === 'PDF' && book.content && book.content.length > 200}}" style="font-size: {{fontSize}}rpx; line-height: {{lineHeight}}; color: {{textColor}}; font-family: {{fontFamily}};">
         <view class="chapter-title">{{book.title}}</view>
         <view class="paragraph" wx:for="{{pdfContentLines}}" wx:key="index">
           <text>{{item}}</text>

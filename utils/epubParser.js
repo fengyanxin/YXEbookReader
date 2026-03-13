@@ -331,7 +331,275 @@ function readOPFFile(basePath, opfPath) {
 }
 
 /**
- * 解析 OPF 内容
+ * 提取 TOC 路径和 spine 顺序
+ */
+function extractTOCAndSpine(opfContent) {
+  var tocPath = null;
+  var spineItems = [];
+
+  // 查找 TOC 引用 - 更宽松的匹配，包括 catalog, ncx, toc 等
+  var tocMatch = opfContent.match(/<item[^>]*href="([^"]*(?:toc|catalog|ncx)[^"]*)"[^>]*id="([^"]*)"[^>]*>/i) ||
+                 opfContent.match(/<item[^>]*id="([^"]*)"[^>]*href="([^"]*(?:toc|catalog|ncx)[^"]*)"[^>]*>/i) ||
+                 opfContent.match(/<item[^>]*href="([^"]*\.ncx)"[^>]*>/i);
+  if (tocMatch) {
+    tocPath = tocMatch[1] || tocMatch[2];
+    console.log('[EPUB] 找到 TOC 文件:', tocPath);
+  }
+
+  // 解析 spine 顺序
+  var spineMatch = opfContent.match(/<spine[^>]*>[\s\S]*?<\/spine>/);
+  if (spineMatch) {
+    var itemrefMatches = spineMatch[0].match(/<itemref[^>]*>/g);
+    if (itemrefMatches) {
+      for (var i = 0; i < itemrefMatches.length; i++) {
+        var idrefMatch = itemrefMatches[i].match(/idref="([^"]+)"/);
+        if (idrefMatch) {
+          spineItems.push(idrefMatch[1]);
+        }
+      }
+    }
+  }
+
+  console.log('[EPUB] Spine 顺序:', spineItems.length, '项');
+
+  return { tocPath: tocPath, spineItems: spineItems };
+}
+
+/**
+ * 解析 TOC 文件 (NCX 格式)
+ */
+function parseNCXFile(basePath, opfDir, tocPath, manifest, spineItems) {
+  return new Promise(function(resolve, reject) {
+    var fs = wx.getFileSystemManager();
+    
+    // 处理 tocPath，可能不带扩展名或在不同目录
+    var tryPaths = [];
+    if (tocPath.indexOf('/') >= 0) {
+      var dir = tocPath.substring(0, tocPath.lastIndexOf('/'));
+      var name = tocPath.substring(tocPath.lastIndexOf('/') + 1);
+      tryPaths.push(basePath + '/' + tocPath); // 原路径
+      tryPaths.push(basePath + '/' + dir + '/' + name + '.xhtml'); // 加 xhtml
+      tryPaths.push(basePath + '/' + dir + '/' + name + '.html'); // 加 html
+      if (opfDir) {
+        tryPaths.push(basePath + '/' + opfDir + '/' + name + '.xhtml');
+      }
+    } else {
+      tryPaths.push(basePath + '/' + tocPath);
+      tryPaths.push(basePath + '/' + tocPath + '.xhtml');
+      tryPaths.push(basePath + '/' + tocPath + '.html');
+      if (opfDir) {
+        tryPaths.push(basePath + '/' + opfDir + '/' + tocPath);
+        tryPaths.push(basePath + '/' + opfDir + '/' + tocPath + '.xhtml');
+      }
+    }
+
+    console.log('[EPUB] 尝试读取 NCX，尝试路径:', tryPaths);
+
+    function tryReadPath(index) {
+      if (index >= tryPaths.length) {
+        console.log('[EPUB] 所有 NCX 路径都失败');
+        resolve([]);
+        return;
+      }
+
+      var fullPath = tryPaths[index];
+      fs.readFile({
+        filePath: fullPath,
+        encoding: 'utf-8',
+        success: function(res) {
+          console.log('[EPUB] NCX 读取成功:', fullPath);
+          var tocContent = res.data;
+          var chapters = [];
+
+          // 解析 NCX 格式
+          var navPointMatches = tocContent.match(/<navPoint[^>]*>[\s\S]*?<\/navPoint>/g);
+          if (navPointMatches) {
+            for (var i = 0; i < navPointMatches.length; i++) {
+              var navPoint = navPointMatches[i];
+
+              // 获取标题
+              var textMatch = navPoint.match(/<text[^>]*>([^<]+)<\/text>/);
+              var chapterTitle = textMatch ? textMatch[1].trim() : '第' + (i + 1) + '章';
+
+              // 获取内容链接
+              var contentMatch = navPoint.match(/<content[^>]*src="([^"]+)"/);
+              var src = contentMatch ? contentMatch[1] : '';
+
+              // 提取文件名作为 ID
+              var fileId = src.split('#')[0].split('/').pop();
+
+              chapters.push({
+                id: 'chapter_' + i,
+                index: i,
+                title: chapterTitle,
+                fileId: fileId,
+                src: src
+              });
+            }
+          }
+
+          // 如果没有 navPoint，尝试解析 nav 元素
+          if (chapters.length === 0) {
+            var navMatches = tocContent.match(/<nav[^>]*[^>]*>[\s\S]*?<\/nav>/g);
+            if (navMatches) {
+              for (var n = 0; n < navMatches.length; n++) {
+                var nav = navMatches[n];
+                var aMatches = nav.match(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g);
+                if (aMatches) {
+                  for (var j = 0; j < aMatches.length; j++) {
+                    var am = aMatches[j].match(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/);
+                    if (am) {
+                      chapters.push({
+                        id: 'chapter_' + chapters.length,
+                        index: chapters.length,
+                        title: am[2].trim() || '第' + (chapters.length + 1) + '章',
+                        fileId: am[1].split('#')[0].split('/').pop(),
+                        src: am[1]
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          console.log('[EPUB] NCX 解析得到章节:', chapters.length);
+          resolve(chapters);
+        },
+        fail: function(err) {
+          console.log('[EPUB] NCX 路径失败:', fullPath);
+          tryReadPath(index + 1);
+        }
+      });
+    }
+
+    tryReadPath(0);
+  });
+}
+
+/**
+ * 解析 EPUB3 Nav 文档
+ */
+function parseNavDocument(basePath, opfDir, tocPath, manifest, spineItems) {
+  return new Promise(function(resolve, reject) {
+    var fs = wx.getFileSystemManager();
+    var fullPath = basePath + '/' + (opfDir ? opfDir + '/' : '') + tocPath;
+
+    console.log('[EPUB] 读取 Nav:', fullPath);
+
+    fs.readFile({
+      filePath: fullPath,
+      encoding: 'utf-8',
+      success: function(res) {
+        var navContent = res.data;
+        var chapters = [];
+
+        // 解析 nav 元素 - 查找目录类型的 nav
+        var navMatches = navContent.match(/<nav[^>]*[^>]*>[\s\S]*?<\/nav>/g);
+        if (navMatches) {
+          var chapterIndex = 0;
+          for (var n = 0; n < navMatches.length; n++) {
+            var nav = navMatches[n];
+            
+            // 首先尝试找到包含 toc 或 chapter 的 nav
+            var isTOCNav = nav.indexOf('toc') > -1 || 
+                           nav.indexOf('chapter') > -1 || 
+                           nav.indexOf('目录') > -1 || 
+                           nav.indexOf('章') > -1 ||
+                           nav.indexOf('section') > -1;
+            
+            // 解析链接
+            var aMatches = nav.match(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g);
+            if (aMatches) {
+              for (var i = 0; i < aMatches.length; i++) {
+                var am = aMatches[i].match(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/);
+                if (am) {
+                  var title = am[2].trim();
+                  var src = am[1];
+                  
+                  // 跳过无效的标题
+                  if (!title || title.length === 0) continue;
+                  
+                  // 过滤条件：跳过明显不是章节标题的
+                  // - 标题太长（超过80字符）
+                  if (title.length > 80) continue;
+                  
+                  // - 标题包含句号且超过30字符（可能是正文摘录）
+                  if (title.length > 30 && (title.indexOf('。') > -1 || title.indexOf('，') > -1)) continue;
+                  
+                  // - 跳过只有特殊字符的
+                  if (/^[\d\s\-_.，。、]+$/.test(title)) continue;
+                  
+                  // 如果不是 TOC nav，只保留看起来像章节标题的（章、第X章、X.X等）
+                  if (!isTOCNav) {
+                    var looksLikeChapter = /^[第章节部篇\d\s]+/.test(title) || 
+                                          /^\d+[\.\、]/.test(title) ||
+                                          title.indexOf('章') > -1 ||
+                                          title.indexOf('篇') > -1;
+                    if (!looksLikeChapter) continue;
+                  }
+                  
+                  chapters.push({
+                    id: 'chapter_' + chapterIndex,
+                    index: chapterIndex,
+                    title: title,
+                    fileId: src.split('#')[0].split('/').pop(),
+                    src: src
+                  });
+                  chapterIndex++;
+                }
+              }
+            }
+          }
+        }
+
+        // 如果章节太少（少于3章），尝试更宽松的解析
+        if (chapters.length < 3) {
+          console.log('[EPUB] Nav 章节太少，尝试更宽松的解析');
+          chapters = [];
+          
+          // 直接解析所有链接
+          var allAMatches = navContent.match(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g);
+          if (allAMatches) {
+            var seen = {};
+            for (var j = 0; j < allAMatches.length; j++) {
+              var am = allAMatches[j].match(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/);
+              if (am) {
+                var title = am[2].trim();
+                var src = am[1];
+                
+                // 跳过无效的和太长的
+                if (!title || title.length === 0 || title.length > 100) continue;
+                
+                // 跳过已经出现过的相同标题
+                if (seen[title]) continue;
+                seen[title] = true;
+                
+                chapters.push({
+                  id: 'chapter_' + chapters.length,
+                  index: chapters.length,
+                  title: title,
+                  fileId: src.split('#')[0].split('/').pop(),
+                  src: src
+                });
+              }
+            }
+          }
+        }
+
+        console.log('[EPUB] Nav 解析得到章节:', chapters.length);
+        resolve(chapters);
+      },
+      fail: function(err) {
+        console.error('[EPUB] Nav 读取失败:', err);
+        resolve([]);
+      }
+    });
+  });
+}
+
+/**
+ * 在目录中查找 TOC 文件
  */
 function parseOPFContent(basePath, opfPath, opfContent) {
   return new Promise(function(resolve, reject) {
@@ -409,6 +677,10 @@ function parseOPFContent(basePath, opfPath, opfContent) {
 
     console.log('[EPUB] 找到内容文件:', contentFiles.length);
 
+    // 提取 TOC 和 spine 信息
+    var tocInfo = extractTOCAndSpine(opfContent);
+    var opfDir = opfPath.lastIndexOf('/') > 0 ? opfPath.substring(0, opfPath.lastIndexOf('/')) : '';
+
     // 如果通过 manifest 没有找到文件，尝试在目录中查找
     if (contentFiles.length === 0) {
       console.log('[EPUB] Manifest 中未找到内容文件，尝试扫描目录');
@@ -418,27 +690,362 @@ function parseOPFContent(basePath, opfPath, opfContent) {
             contentFiles = scannedFiles;
             console.log('[EPUB] 目录扫描找到文件:', contentFiles.length);
           }
-          readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve);
+            // 尝试从目录中查找 TOC 文件
+          findTOCInDirectory(basePath)
+            .then(function(tocChapters) {
+              if (tocChapters && tocChapters.length > 0) {
+                console.log('[EPUB] 目录中找到 TOC');
+                readContentFilesWithTOC(basePath, opfDir, contentFiles, tocChapters, manifest, [], title, author, description, resolve);
+              } else {
+                readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve, tocInfo.spineItems, manifest);
+              }
+            })
+            .catch(function() {
+              readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve, tocInfo.spineItems, manifest);
+            });
         })
         .catch(function() {
-          readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve);
+          readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve, tocInfo.spineItems, manifest);
         });
+    } else if (tocInfo.tocPath) {
+      // 判断 TOC 类型
+      if (tocInfo.tocPath.indexOf('.ncx') > -1) {
+        parseNCXFile(basePath, opfDir, tocInfo.tocPath, manifest, tocInfo.spineItems)
+          .then(function(tocChapters) {
+            if (tocChapters.length > 0) {
+              console.log('[EPUB] 使用 NCX TOC 章节');
+              readContentFilesWithTOC(basePath, opfDir, contentFiles, tocChapters, manifest, tocInfo.spineItems, title, author, description, resolve);
+            } else {
+              readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve, tocInfo.spineItems, manifest);
+            }
+          })
+          .catch(function() {
+            readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve, tocInfo.spineItems, manifest);
+          });
+      } else {
+        // 尝试 EPUB3 Nav 格式
+        parseNavDocument(basePath, opfDir, tocInfo.tocPath, manifest, tocInfo.spineItems)
+          .then(function(tocChapters) {
+            if (tocChapters.length > 0) {
+              console.log('[EPUB] 使用 Nav TOC 章节');
+              readContentFilesWithTOC(basePath, opfDir, contentFiles, tocChapters, manifest, tocInfo.spineItems, title, author, description, resolve);
+            } else {
+              readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve, tocInfo.spineItems, manifest);
+            }
+          })
+          .catch(function() {
+            readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve, tocInfo.spineItems, manifest);
+          });
+      }
     } else {
-      readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve);
+      // 没有 TOC 文件，直接读取内容文件
+      readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve, tocInfo.spineItems, manifest);
     }
   });
 }
 
 /**
+ * 在目录中查找 TOC 文件
+ */
+function findTOCInDirectory(basePath) {
+  return new Promise(function(resolve, reject) {
+    var fs = wx.getFileSystemManager();
+    var tocFiles = [
+      'OEBPS/catalog.xhtml', 
+      'OEBPS/toc.xhtml', 
+      'OEBPS/ncx', 
+      'OEBPS/ncx.xhtml',
+      'toc.ncx', 
+      'nav.xhtml', 
+      'nav.html', 
+      'toc.xhtml', 
+      'toc.html', 
+      'TableOfContents.xhtml'
+    ];
+
+    function tryNextFile(index) {
+      if (index >= tocFiles.length) {
+        resolve([]);
+        return;
+      }
+
+      var tocPath = basePath + '/' + tocFiles[index];
+      fs.access({
+        path: tocPath,
+        success: function() {
+          console.log('[EPUB] 找到 TOC 文件:', tocFiles[index]);
+          if (tocFiles[index].indexOf('.ncx') > -1 || tocFiles[index] === 'OEBPS/ncx') {
+            parseNCXFile(basePath, '', tocFiles[index], {}, [])
+              .then(function(chapters) {
+                resolve(chapters);
+              })
+              .catch(function() {
+                resolve([]);
+              });
+          } else {
+            // catalog.xhtml 可能是 NCX 格式
+            parseNCXFile(basePath, '', tocFiles[index], {}, [])
+              .then(function(chapters) {
+                if (chapters.length > 0) {
+                  resolve(chapters);
+                } else {
+                  // 尝试作为 Nav 格式解析
+                  parseNavDocument(basePath, '', tocFiles[index], {}, [])
+                    .then(function(chapters2) {
+                      resolve(chapters2);
+                    })
+                    .catch(function() {
+                      resolve([]);
+                    });
+                }
+              })
+              .catch(function() {
+                resolve([]);
+              });
+          }
+        },
+        fail: function() {
+          tryNextFile(index + 1);
+        }
+      });
+    }
+
+    tryNextFile(0);
+  });
+}
+
+/**
+ * 使用 TOC 读取内容文件
+ */
+function readContentFilesWithTOC(basePath, opfDir, contentFiles, tocChapters, manifest, spineItems, title, author, description, resolve) {
+  var fs = wx.getFileSystemManager();
+
+  // 建立 fileId 到 href 的映射
+  var idToHref = {};
+  for (var id in manifest) {
+    idToHref[id] = manifest[id];
+  }
+
+  // 将 TOC 章节与内容文件匹配
+  var chapters = [];
+  var tocIndex = 0;
+
+  function readNextTOCChapter(index) {
+    if (index >= tocChapters.length) {
+      // 所有 TOC 章节处理完成
+      console.log('[EPUB] TOC 章节读取完成，章节数:', chapters.length);
+
+      // 只添加没有在 TOC 中但确实存在于内容文件中的章节（排除封面、版权页等）
+      var usedFiles = {};
+      for (var i = 0; i < chapters.length; i++) {
+        if (chapters[i].filePath) {
+          var fp = chapters[i].filePath;
+          usedFiles[fp] = true;
+          usedFiles[fp.split('/').pop()] = true;
+        }
+      }
+
+      // 需要跳过的文件（封面、版权等）
+      var skipFiles = ['cover', 'copyright', 'catalog', 'titlepage', 'toc', 'nav', 'index', 'front'];
+
+      for (var j = 0; j < contentFiles.length; j++) {
+        var cf = contentFiles[j];
+        var cfName = cf.split('/').pop().replace(/\.[^/.]+$/, '');
+        
+        // 跳过已经使用或系统性的文件
+        if (usedFiles[cf] || usedFiles[cf.split('/').pop()]) {
+          continue;
+        }
+        
+        // 跳过封面、版权等文件
+        var shouldSkip = false;
+        for (var s = 0; s < skipFiles.length; s++) {
+          if (cfName.toLowerCase().indexOf(skipFiles[s]) === 0) {
+            shouldSkip = true;
+            break;
+          }
+        }
+        if (shouldSkip) {
+          continue;
+        }
+
+        // 添加剩余的有效内容章节
+        chapters.push({
+          id: 'chapter_' + chapters.length,
+          index: chapters.length,
+          title: cfName,
+          content: '',
+          filePath: cf
+        });
+      }
+
+      // 按 index 排序
+      chapters.sort(function(a, b) {
+        return a.index - b.index;
+      });
+
+      // 重新编号
+      for (var k = 0; k < chapters.length; k++) {
+        chapters[k].index = k;
+        chapters[k].id = 'chapter_' + k;
+      }
+
+      resolve({
+        type: 'EPUB',
+        title: title,
+        author: author,
+        description: description,
+        content: '',
+        chapters: chapters,
+        totalChapters: chapters.length
+      });
+      return;
+    }
+
+    var tocChapter = tocChapters[index];
+    var fileId = tocChapter.fileId;
+    var href = idToHref[fileId] || fileId;
+
+    // 查找对应的内容文件 - 使用更精确的匹配
+    var contentFilePath = null;
+    var fileIdBase = fileId.replace(/\.[^/.]+$/, ''); // 去掉扩展名
+    
+    for (var i = 0; i < contentFiles.length; i++) {
+      var cf = contentFiles[i];
+      var cfName = cf.split('/').pop();
+      var cfNameBase = cfName.replace(/\.[^/.]+$/, ''); // 去掉扩展名
+      
+      // 精确匹配文件名（去掉扩展名后）
+      if (cfNameBase === fileIdBase || cf.indexOf(fileId) === 0 || cf.endsWith(fileId)) {
+        contentFilePath = cf;
+        break;
+      }
+    }
+
+    // 如果没找到，尝试模糊匹配
+    if (!contentFilePath) {
+      for (var i = 0; i < contentFiles.length; i++) {
+        var cf = contentFiles[i];
+        if (cf.indexOf(fileId) > -1) {
+          contentFilePath = cf;
+          break;
+        }
+      }
+    }
+
+    console.log('[EPUB] TOC 章节匹配:', tocChapter.title, '-> fileId:', fileId, '-> 匹配到:', contentFilePath);
+
+    if (contentFilePath) {
+      var fullPath = basePath + '/' + (opfDir ? opfDir + '/' : '') + contentFilePath;
+
+      fs.readFile({
+        filePath: fullPath,
+        encoding: 'utf-8',
+        success: function(res) {
+          var textContent = extractTextFromHTML(res.data);
+
+          chapters.push({
+            id: 'chapter_' + index,
+            index: index,
+            title: tocChapter.title,
+            content: textContent,
+            filePath: contentFilePath
+          });
+
+          readNextTOCChapter(index + 1);
+        },
+        fail: function(err) {
+          console.error('[EPUB] TOC 章节内容读取失败:', contentFilePath);
+          chapters.push({
+            id: 'chapter_' + index,
+            index: index,
+            title: tocChapter.title,
+            content: '',
+            filePath: contentFilePath
+          });
+          readNextTOCChapter(index + 1);
+        }
+      });
+    } else {
+      console.log('[EPUB] TOC 章节找不到对应文件:', fileId);
+      chapters.push({
+        id: 'chapter_' + index,
+        index: index,
+        title: tocChapter.title,
+        content: '',
+        filePath: ''
+      });
+      readNextTOCChapter(index + 1);
+    }
+  }
+
+  readNextTOCChapter(0);
+}
+
+/**
  * 读取内容文件 - 作为章节
  */
-function readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve) {
+function readContentFiles(basePath, opfPath, contentFiles, title, author, description, resolve, spineItems, manifest) {
   var fs = wx.getFileSystemManager();
 
   // 如果有内容文件，读取所有文件作为章节
   if (contentFiles.length > 0) {
     // 获取 OPF 文件所在目录
     var opfDir = opfPath.lastIndexOf('/') > 0 ? opfPath.substring(0, opfPath.lastIndexOf('/')) : '';
+
+    // 根据 spine 顺序排序 contentFiles
+    if (spineItems && spineItems.length > 0 && contentFiles.length > 1 && manifest) {
+      console.log('[EPUB] 尝试按 spine 顺序排序');
+      
+      // 先用 manifest 建立 ID -> href 的映射
+      // spineItems 是 ID 数组，需要用 manifest[ID] 获取实际文件路径
+      var sortedFiles = [];
+      var usedFiles = {};
+      
+      // 首先按 spine 顺序添加文件
+      for (var s = 0; s < spineItems.length; s++) {
+        var spineId = spineItems[s];
+        
+        // 从 manifest 获取实际文件路径
+        var href = manifest[spineId];
+        if (!href) continue;
+        
+        // 去掉扩展名用于匹配
+        var spineBase = href.replace(/\.[^/.]+$/, '');
+        
+        for (var i = 0; i < contentFiles.length; i++) {
+          var cf = contentFiles[i];
+          var cfBase = cf.replace(/\.[^/.]+$/, '');
+          
+          // 匹配：直接比较或去掉目录后比较
+          if (cf === href || cfBase === spineBase || cf.endsWith(spineBase) || cf.endsWith(href)) {
+            if (!usedFiles[cf]) {
+              sortedFiles.push(cf);
+              usedFiles[cf] = true;
+              break;
+            }
+          }
+        }
+      }
+      
+      // 添加未匹配的文件
+      for (var i = 0; i < contentFiles.length; i++) {
+        if (!usedFiles[contentFiles[i]]) {
+          sortedFiles.push(contentFiles[i]);
+        }
+      }
+      
+      if (sortedFiles.length > 0 && sortedFiles.length === contentFiles.length) {
+        contentFiles = sortedFiles;
+        console.log('[EPUB] Spine 排序成功');
+      } else {
+        console.log('[EPUB] Spine 排序部分匹配');
+      }
+    }
+
+    // 需要跳过的短内容文件模式
+    var skipPatterns = ['cover', 'copyright', 'catalog', 'titlepage', 'toc', 'nav', 'index', 'front', 'page', 'blank', 'empty'];
+    var minContentLength = 100; // 最小内容长度
 
     // 章节数组
     var chapters = [];
@@ -492,16 +1099,37 @@ function readContentFiles(basePath, opfPath, contentFiles, title, author, descri
             chapterTitle = '第' + chapterTitle + '章';
           }
 
-          // 添加到章节数组
-          chapters.push({
-            id: 'chapter_' + index,
-            index: index,
-            title: chapterTitle,
-            content: textContent,
-            filePath: contentFile
-          });
+          // 检查是否应该跳过此文件（短内容或匹配跳过模式）
+          var fileNameBase = fileName.replace(/\.[^/.]+$/, '').toLowerCase();
+          var shouldSkip = false;
+          
+          // 检查文件名模式
+          for (var p = 0; p < skipPatterns.length; p++) {
+            if (fileNameBase.indexOf(skipPatterns[p]) === 0) {
+              shouldSkip = true;
+              console.log('[EPUB] 跳过文件（匹配模式）:', fileName);
+              break;
+            }
+          }
+          
+          // 检查内容长度（如果内容太短，可能是目录页或封面等）
+          if (!shouldSkip && textContent.length < minContentLength) {
+            shouldSkip = true;
+            console.log('[EPUB] 跳过文件（内容太短）:', fileName, '长度:', textContent.length);
+          }
 
-          console.log('[EPUB] 章节 ' + (index + 1) + ' 提取完成，标题:', chapterTitle, '长度:', textContent.length);
+          if (!shouldSkip) {
+            // 添加到章节数组
+            chapters.push({
+              id: 'chapter_' + chapters.length,
+              index: chapters.length,
+              title: chapterTitle,
+              content: textContent,
+              filePath: contentFile
+            });
+
+            console.log('[EPUB] 章节 ' + (chapters.length) + ' 提取完成，标题:', chapterTitle, '长度:', textContent.length);
+          }
 
           readNextFile(index + 1);
         },

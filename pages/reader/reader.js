@@ -34,6 +34,7 @@ Page({
 
     // 滚动相关
     scrollToView: '',
+    scrollTop: 0,
     scrollPositions: {}
   },
 
@@ -244,7 +245,10 @@ Page({
 
       // 使用 setTimeout 确保渲染完成后滚动
       setTimeout(() => {
-        this.setData({ scrollToView: 'chapter_start' });
+        this.setData({ 
+          scrollToView: 'chapter_start',
+          scrollTop: 0 
+        });
         setTimeout(() => {
           const query = wx.createSelectorQuery();
           query.select('.text-content').boundingClientRect(rect => {
@@ -253,22 +257,18 @@ Page({
               const scrollTop = Math.min(targetScrollTop, rect[0].height);
               this.setData({
                 scrollToView: '',
+                scrollTop: scrollTop,
                 chapterScrollTop: scrollTop
               });
-              // 延迟滚动确保页面已渲染
-              setTimeout(() => {
-                wx.pageScrollTo({
-                  scrollTop: scrollTop,
-                  duration: 300
-                });
-              }, 100);
             }
           }).exec();
         }, 100);
       }, 50);
     } else {
-      // 如果没有保存的位置，重置滚动
+      // 如果没有保存的位置或明确不恢复滚动，重置到章节开头
       this.setData({
+        scrollToView: '',
+        scrollTop: 0,
         chapterScrollTop: 0
       });
     }
@@ -402,12 +402,8 @@ Page({
         const targetScrollTop = Math.min(progress * totalHeight, totalHeight);
 
         this.setData({
-          chapterScrollTop: targetScrollTop
-        });
-
-        wx.pageScrollTo({
-          scrollTop: targetScrollTop,
-          duration: 300
+          chapterScrollTop: targetScrollTop,
+          scrollTop: targetScrollTop
         });
       }
     }).exec();
@@ -617,10 +613,20 @@ Page({
   // 选择章节
   selectChapter(e) {
     const index = parseInt(e.currentTarget.dataset.index);
-    this.loadChapter(index);
+    
+    // 清除该章节的滚动位置记录，确保从章节开头开始阅读
+    const chapterPositions = this.data.scrollPositions || {};
+    delete chapterPositions['chapter_' + index];
+    
     this.setData({
-      showChapterList: false
+      showChapterList: false,
+      chapterScrollTop: 0,
+      scrollTop: 0,
+      scrollPositions: chapterPositions
     });
+    
+    // 加载章节，传递 false 表示不恢复滚动位置
+    this.loadChapter(index, false);
   },
 
   // 打开设置
@@ -782,12 +788,8 @@ Page({
         const targetScrollTop = Math.min(progress * totalHeight, totalHeight);
 
         this.setData({
-          chapterScrollTop: targetScrollTop
-        });
-
-        wx.pageScrollTo({
-          scrollTop: targetScrollTop,
-          duration: 300
+          chapterScrollTop: targetScrollTop,
+          scrollTop: targetScrollTop
         });
       }
     }).exec();
