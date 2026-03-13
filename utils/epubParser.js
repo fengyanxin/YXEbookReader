@@ -1086,10 +1086,15 @@ function readContentFiles(basePath, opfPath, contentFiles, title, author, descri
         filePath: contentFilePath,
         encoding: 'utf-8',
         success: function(res) {
+          var htmlContent = res.data;
+          
           // 提取文本内容
-          var textContent = extractTextFromHTML(res.data);
+          var textContent = extractTextFromHTML(htmlContent);
 
-          // 从文件名提取章节标题
+          // 尝试从HTML提取章节标题
+          var htmlTitle = extractChapterTitleFromHTML(htmlContent);
+          
+          // 从文件名提取章节标题作为备选
           var fileName = contentFile.split('/').pop();
           var chapterTitle = fileName.replace(/\.[^/.]+$/, '');
           // 格式化章节标题
@@ -1097,6 +1102,12 @@ function readContentFiles(basePath, opfPath, contentFiles, title, author, descri
           // 如果标题是纯数字，加上"第X章"
           if (/^\d+$/.test(chapterTitle)) {
             chapterTitle = '第' + chapterTitle + '章';
+          }
+          
+          // 如果从HTML提取到了标题，使用它
+          if (htmlTitle) {
+            chapterTitle = htmlTitle;
+            console.log('[EPUB] 从HTML提取到标题:', chapterTitle);
           }
 
           // 检查是否应该跳过此文件（短内容或匹配跳过模式）
@@ -1112,10 +1123,11 @@ function readContentFiles(basePath, opfPath, contentFiles, title, author, descri
             }
           }
           
-          // 检查内容长度（如果内容太短，可能是目录页或封面等）
-          if (!shouldSkip && textContent.length < minContentLength) {
+          // 降低跳过阈值，只跳过极短的内容（<50字符）
+          var ultraShortContentLength = 50;
+          if (!shouldSkip && textContent.length < ultraShortContentLength) {
             shouldSkip = true;
-            console.log('[EPUB] 跳过文件（内容太短）:', fileName, '长度:', textContent.length);
+            console.log('[EPUB] 跳过文件（内容极短）:', fileName, '长度:', textContent.length);
           }
 
           if (!shouldSkip) {
@@ -1221,6 +1233,53 @@ function scanDirectoryForHTML(dirPath, baseDir, relativePath) {
       resolve([]); // 返回空数组而不是拒绝
     }
   });
+}
+
+/**
+ * 从 HTML 中提取章节标题
+ */
+function extractChapterTitleFromHTML(html) {
+  if (!html) return null;
+  
+  var title = null;
+  
+  // 尝试从 <title> 标签提取
+  var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  if (titleMatch && titleMatch[1]) {
+    title = titleMatch[1].trim();
+    if (title.length > 0 && title.length < 100) {
+      return title;
+    }
+  }
+  
+  // 尝试从 <h1> 标签提取
+  var h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+  if (h1Match && h1Match[1]) {
+    title = h1Match[1].trim();
+    if (title.length > 0 && title.length < 100) {
+      return title;
+    }
+  }
+  
+  // 尝试从 <h2> 标签提取
+  var h2Match = html.match(/<h2[^>]*>([^<]+)<\/h2>/i);
+  if (h2Match && h2Match[1]) {
+    title = h2Match[1].trim();
+    if (title.length > 0 && title.length < 100) {
+      return title;
+    }
+  }
+  
+  // 尝试从 class 包含 title 的元素提取
+  var classTitleMatch = html.match(/<[^>]*class="[^"]*title[^"]*"[^>]*>([^<]+)<\/[^>]+>/i);
+  if (classTitleMatch && classTitleMatch[1]) {
+    title = classTitleMatch[1].trim();
+    if (title.length > 0 && title.length < 100) {
+      return title;
+    }
+  }
+  
+  return null;
 }
 
 /**

@@ -460,9 +460,11 @@ progress-slider[disabled] {
 
 .panel-body {
   flex: 1;
+  height: 60vh;
   padding: 0 30rpx 30rpx;
   padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom);
+  overflow-y: auto;
 }
 
 /* 设置区块 */
