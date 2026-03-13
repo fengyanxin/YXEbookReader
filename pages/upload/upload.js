@@ -37,7 +37,10 @@ Page({
   // 加载最近上传的书籍
   loadRecentBooks() {
     const books = app.globalData.books || [];
-    const recentBooks = books.slice(-5).reverse();
+    const recentBooks = books.slice(-5).reverse().map(book => ({
+      ...book,
+      isGradientCover: book.cover && typeof book.cover === 'string' && book.cover.startsWith('linear-gradient')
+    }));
     this.setData({ recentBooks });
   },
 
@@ -332,6 +335,12 @@ Page({
       totalChapters: result.totalChapters || 0
     };
 
+    return this.addGradientFlag(book);
+  },
+
+  // 添加渐变封面标识
+  addGradientFlag(book) {
+    book.isGradientCover = book.cover && typeof book.cover === 'string' && book.cover.startsWith('linear-gradient');
     return book;
   },
 
@@ -364,7 +373,7 @@ Page({
 
     wx.hideLoading();
 
-    return book;
+    return this.addGradientFlag(book);
   },
 
   // 生成默认封面
@@ -419,8 +428,10 @@ Page({
       sizeType: ['compressed'],
       sourceType: ['album', 'camera'],
       success: (res) => {
+        const newCover = res.tempFilePaths[0];
         this.setData({
-          'editingBook.cover': res.tempFilePaths[0]
+          'editingBook.cover': newCover,
+          'editingBook.isGradientCover': false
         });
       }
     });

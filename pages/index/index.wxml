@@ -25,7 +25,7 @@
           <!-- 书籍封面 -->
           <view class="book-cover-wrapper">
             <!-- 如果封面是渐变色，使用view显示 -->
-            <view wx:if="{{item.cover && item.cover.indexOf('linear-gradient') === 0}}" class="book-cover book-cover-gradient" style="background: {{item.cover}};"></view>
+            <view wx:if="{{item.isGradientCover}}" class="book-cover book-cover-gradient" style="background: {{item.cover}};"></view>
             <!-- 否则使用image标签 -->
             <image wx:else class="book-cover" src="{{item.cover || '/images/default-cover.png'}}" mode="aspectFill"></image>
             <!-- 阅读进度 -->

@@ -799,6 +799,21 @@ Page({
     this.setData({ readProgress: progress });
   },
 
+  // 加载阅读设置
+  loadSettings() {
+    const settings = app.globalData.settings || {};
+    this.setData({
+      fontSize: settings.fontSize || 18,
+      fontFamily: settings.fontFamily || 'system',
+      lineHeight: settings.lineHeight || 1.8,
+      theme: settings.theme || 'light',
+      backgroundType: settings.backgroundType || 'solid',
+      backgroundColor: settings.backgroundColor || '#ffffff',
+      textColor: settings.textColor || '#333333',
+      pageEffect: settings.pageEffect || 'slide'
+    });
+  },
+
   // 更新设置
   updateSettings(settings) {
     app.updateSettings(settings);

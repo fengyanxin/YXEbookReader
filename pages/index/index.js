@@ -43,6 +43,7 @@ Page({
         title: book.title,
         author: book.author,
         cover: book.cover,
+        isGradientCover: book.cover && typeof book.cover === 'string' && book.cover.startsWith('linear-gradient'),
         format: book.format,
         content: book.content,
         localPath: book.localPath,

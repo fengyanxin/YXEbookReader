@@ -72,7 +72,7 @@
     </view>
     <scroll-view class="recent-list" scroll-x show-scrollbar="{{false}}">
       <view class="recent-item" wx:for="{{recentBooks}}" wx:key="id" bindtap="openBook" data-book="{{item}}">
-        <view wx:if="{{item.cover && item.cover.indexOf('linear-gradient') === 0}}" class="recent-cover recent-cover-gradient" style="background: {{item.cover}};"></view>
+        <view wx:if="{{item.isGradientCover}}" class="recent-cover recent-cover-gradient" style="background: {{item.cover}};"></view>
         <image wx:else class="recent-cover" src="{{item.cover || '/images/default-cover.png'}}" mode="aspectFill"></image>
         <text class="recent-title">{{item.title}}</text>
       </view>
@@ -107,8 +107,8 @@
     <view class="modal-body">
       <!-- 封面预览 -->
       <view class="edit-cover-preview">
-        <view wx:if="{{editingBook.cover && editingBook.cover.indexOf('linear-gradient') === 0}}" class="cover-image cover-image-gradient" style="background: {{editingBook.cover}};"></view>
-        <image wx:else class="cover-image" src="{{editingBook.cover}}" mode="aspectFill"></image>
+        <view wx:if="{{editingBook.isGradientCover}}" class="cover-image cover-image-gradient" style="background: {{editingBook.cover}};"></view>
+        <image wx:else class="cover-image" src="{{editingBook.cover || '/images/default-cover.png'}}" mode="aspectFill"></image>
         <button class="btn btn-outline change-cover-btn" bindtap="changeCover">更换封面</button>
       </view>
 
